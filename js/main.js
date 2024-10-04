@@ -174,6 +174,7 @@ function animate() {
     }
   );
   ast_belt.rotateZ(0.001)
+  orbit.update()
   renderer.render(scene, camera);
 }
 renderer.setAnimationLoop(animate)
