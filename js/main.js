@@ -161,7 +161,7 @@ gui.add(options, "Show path").onChange((e) => {
   });
 });
 
-gui.add(options, "Planet Size", 1, 5).onChange((e) => {
+gui.add(options, "Planet Size", 1, 8).onChange((e) => {
   planets.forEach(({planet}) => planet.scale.set(e, e, e))
 })
 
