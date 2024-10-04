@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
 const renderer = new THREE.WebGLRenderer();
@@ -30,7 +30,7 @@ scene.background = textures.star
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
-  0.1,
+  20,
   25000
 );
 const orbit = new OrbitControls(camera, renderer.domElement);
@@ -145,11 +145,12 @@ const generateAsteroidBelt = (innerRadius, outerRadius, texture) => {
 
 const ast_belt = generateAsteroidBelt(300, 500, textures.asteroidBelt)
 var GUI = dat.gui.GUI;
-const gui = new GUI();
+const gui = new GUI({name:"Controls"});
 const options = {
   "Real view": true,
   "Show path": true,
-  "Planet Size": 1
+  "Planet Size": 1,
+  "Playing": true
 };
 gui.add(options, "Real view").onChange((e) => {
   ambientLight.intensity = e ? 0 : 0.5;
@@ -163,6 +164,7 @@ gui.add(options, "Show path").onChange((e) => {
 gui.add(options, "Planet Size", 1, 5).onChange((e) => {
   planets.forEach(({planet}) => planet.scale.set(e, e, e))
 })
+
 function animate() {
   sun.rotateY(0.004);
   planets.forEach(
@@ -174,7 +176,14 @@ function animate() {
   ast_belt.rotateZ(0.001)
   renderer.render(scene, camera);
 }
-renderer.setAnimationLoop(animate);
+renderer.setAnimationLoop(animate)
+gui.add(options, "Playing").onChange((e) => {
+  if(e) {
+    renderer.setAnimationLoop(animate)
+  } else {
+    renderer.setAnimationLoop(() => renderer.render(scene, camera))
+  }
+})
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
