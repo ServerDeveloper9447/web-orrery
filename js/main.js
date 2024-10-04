@@ -3,10 +3,9 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+document.getElementById("orrery").appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
 const planetsData = await fetch('/assets/planetary_data.json').then(res => res.json())
-
 const textures = {
   star: textureLoader.load("./image/stars.png"),
   sun: textureLoader.load("./image/sun.jpg"),
@@ -32,7 +31,7 @@ const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
-  100000
+  25000
 );
 const orbit = new OrbitControls(camera, renderer.domElement);
 camera.position.set(0, 30, 150);
@@ -43,8 +42,8 @@ scene.add(sunLight);
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
-
-const sungeo = new THREE.SphereGeometry(15, 50, 50);
+const earthData = planetsData.planets.find(x => x.name.toLowerCase() == 'earth')
+const sungeo = new THREE.SphereGeometry(35, 50, 50);
 const sunMaterial = new THREE.MeshBasicMaterial({
   map: textures.sun,
 });
@@ -122,10 +121,10 @@ const generatePlanet = (size, planetTexture, x, inclination = 0, axisTilt = 0, r
     inclination: inclination
   };
 };
-const earthData = planetsData.planets.find(x => x.name.toLowerCase() == 'earth')
+
 const planets = planetsData.planets.map((planet) => {
   return {
-    ...generatePlanet((planet.diameter_km/earthData.diameter_km)*10,textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees),
+    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees),
     rotating_speed_around_sun: planet.orbital_velocity_km_s / 10000,
     self_rotation_speed: (1/planet.rotation_period_hours)
   }
@@ -144,8 +143,26 @@ const generateAsteroidBelt = (innerRadius, outerRadius, texture) => {
   return asteroidBeltMesh;
 };
 
-const ast_belt = generateAsteroidBelt(400, 450, textures.asteroidBelt)
+const ast_belt = generateAsteroidBelt(300, 500, textures.asteroidBelt)
+var GUI = dat.gui.GUI;
+const gui = new GUI();
+const options = {
+  "Real view": true,
+  "Show path": true,
+  "Planet Size": 1
+};
+gui.add(options, "Real view").onChange((e) => {
+  ambientLight.intensity = e ? 0 : 0.5;
+});
+gui.add(options, "Show path").onChange((e) => {
+  path_of_planets.forEach((dpath) => {
+    dpath.visible = e;
+  });
+});
 
+gui.add(options, "Planet Size", 1, 5).onChange((e) => {
+  planets.forEach(({planet}) => planet.scale.set(e, e, e))
+})
 function animate() {
   sun.rotateY(0.004);
   planets.forEach(
