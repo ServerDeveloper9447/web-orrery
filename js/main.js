@@ -20,7 +20,8 @@ const textures = {
   pluto: textureLoader.load("./image/pluto.jpg"),
   saturnRing: textureLoader.load("./image/saturn_ring.png"),
   uranusRing: textureLoader.load("./image/uranus_ring.png"),
-  asteroidBelt: textureLoader.load('./image/asteroid_belt.png')
+  asteroidBelt: textureLoader.load('./image/asteroid_belt.png'),
+  luna: textureLoader.load('./image/moon.png')
 };
 
 const scene = new THREE.Scene();
@@ -78,53 +79,90 @@ function createLineLoopWithMesh(radius, color, width, inclination = 0) {
   path_of_planets.push(lineLoop);
 }
 
-const generatePlanet = (size, planetTexture, x, inclination = 0, axisTilt = 0, ring) => {
+const generatePlanet = (size, planetTexture, x, inclination = 0, axisTilt = 0, ring, moons = []) => {
   const planetGeometry = new THREE.SphereGeometry(size, 50, 50);
   const planetMaterial = new THREE.MeshStandardMaterial({
     map: planetTexture,
   });
   const planet = new THREE.Mesh(planetGeometry, planetMaterial);
   const planetObj = new THREE.Object3D();
+  planetObj.add(planet);
   planet.position.set(x, 0, 0);
-  
+
   const pivot = new THREE.Object3D();
   pivot.add(planetObj);
   pivot.rotation.x = -inclination * Math.PI / 180;
-  
+  scene.add(pivot);
+
+  // Add rings if the planet has them
   if (ring) {
-    const ringGeo = new THREE.RingGeometry(
-      ring.innerRadius,
-      ring.outerRadius,
-      32
-    );
+    const ringGeo = new THREE.RingGeometry(ring.innerRadius, ring.outerRadius, 32);
     const ringMat = new THREE.MeshBasicMaterial({
       map: ring.ringmat,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      transparent: true,
     });
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    planetObj.add(ringMesh);
     ringMesh.position.set(x, 0, 0);
     ringMesh.rotation.x = axisTilt * Math.PI / 180 - 0.5 * Math.PI;
+    planetObj.add(ringMesh);
   }
-  
+
   planet.rotation.x = axisTilt * Math.PI / 180;
-  
-  scene.add(pivot);
-  planetObj.add(planet);
-  
-  createLineLoopWithMesh(x, 0xffffff, 3, inclination);
-  
+
+  // Add moons
+  const m = moons.map((moon) => {
+    // Adjust moon size and distance relative to the planet size
+    const moonSize = size * 0.2; // Example: make moon smaller
+    const moonTexture = textures[moon.name.toLowerCase()];
+    const moonDistance = size * 2.5 + moon.distance_from_planet; // Adjust moon distance
+    const moonInclination = moon.orbital_inclination_degrees;
+    const moonRotatingSpeed = moon.orbital_velocity_km_s / 10000;
+    const moonSelfRotationSpeed = 1 / moon.rotation_period_hours;
+
+    // Create the moon mesh and object
+    const moonGeometry = new THREE.SphereGeometry(moonSize, 30, 30); // Fewer segments for performance
+    const moonMaterial = new THREE.MeshStandardMaterial({
+      map: moonTexture,
+    });
+    const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+    const moonObj = new THREE.Object3D();
+    moonMesh.position.set(moonDistance, 0, 0);
+    moonObj.add(moonMesh);
+
+    // Create moon pivot for rotation around the planet
+    const moonPivot = new THREE.Object3D();
+    moonPivot.add(moonObj);
+    moonPivot.rotation.x = moonInclination * Math.PI / 180; // Apply moon's inclination
+    planetObj.add(moonPivot); // Attach moon to planet object
+
+    // Draw moon orbit around planet (fixed)
+    createLineLoopWithMesh(moonDistance, 0xffffff, 1, moonInclination);
+
+    return {
+      moon: moonObj,
+      pivot: moonPivot,
+      mesh: moonMesh,
+      rotating_speed_around_planet: moonRotatingSpeed,
+      self_rotation_speed: moonSelfRotationSpeed,
+    };
+  });
+
+  // Create planet orbit line (fixed)
+  createLineLoopWithMesh(x, 0xffffff, 1, inclination); // Planet orbit is drawn properly here.
+
   return {
     planetObj: planetObj,
     planet: planet,
     pivot: pivot,
-    inclination: inclination
+    inclination: inclination,
+    moons: m,
   };
 };
 
 const planets = planetsData.planets.map((planet) => {
   return {
-    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees),
+    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null, planet.moons),
     rotating_speed_around_sun: planet.orbital_velocity_km_s / 10000,
     self_rotation_speed: (1/planet.rotation_period_hours)
   }
@@ -149,8 +187,9 @@ const gui = new GUI({name:"Controls"});
 const options = {
   "Real view": true,
   "Show path": true,
-  "Planet Size": 1,
-  "Playing": true
+  "Planet Scale": 1,
+  "Playing": true,
+  "Speed": 1
 };
 gui.add(options, "Real view").onChange((e) => {
   ambientLight.intensity = e ? 0 : 0.5;
@@ -161,16 +200,28 @@ gui.add(options, "Show path").onChange((e) => {
   });
 });
 
-gui.add(options, "Planet Size", 1, 8).onChange((e) => {
-  planets.forEach(({planet}) => planet.scale.set(e, e, e))
+gui.add(options, "Planet Scale", 1, 10).onChange((e) => {
+  planets.forEach(({planet, moons}) => {
+    planet.scale.set(e, e, e)
+    moons.forEach((moon) => {
+      moon.moon.scale.set(e, e, e)
+    })
+  })
 })
 
 function animate() {
   sun.rotateY(0.004);
   planets.forEach(
-    ({ pivot, planet, rotating_speed_around_sun, self_rotation_speed }) => {
-      pivot.rotateY(rotating_speed_around_sun);
-      planet.rotateY(self_rotation_speed);
+    ({ pivot, planet, rotating_speed_around_sun, self_rotation_speed, moons }) => {
+      pivot.rotateY(options.Speed * rotating_speed_around_sun);
+      planet.rotateY(options.Speed * self_rotation_speed);
+      
+      if (moons) {
+        moons.forEach((moon) => {
+          moon.pivot.rotateY(options.Speed * moon.rotating_speed_around_planet);
+          moon.mesh.rotateY(options.Speed * moon.self_rotation_speed);
+        });
+      }
     }
   );
   ast_belt.rotateZ(0.001)

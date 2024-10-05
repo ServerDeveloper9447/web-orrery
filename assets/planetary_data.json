@@ -67,7 +67,18 @@
         "surface_pressure_bars": 1,
         "number_of_moons": 1,
         "ring_system": false,
-        "global_magnetic_field": true
+        "global_magnetic_field": true,
+        "moons": [
+          {
+            "name": "Luna",
+            "orbital_inclination_degrees": 25,
+            "rotating_speed_around_planet": 90,
+            "self_rotation_speed": 100,
+            "size": 100,
+            "distance_from_planet": 100,
+            "obliquity_to_orbit_degrees": 30
+          }
+        ]
       },
       {
         "name": "Mars",
