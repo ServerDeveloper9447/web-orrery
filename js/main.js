@@ -53,175 +53,130 @@ scene.add(sun);
 
 const path_of_planets = [];
 function createLineLoopWithMesh(radius, color, width, inclination = 0) {
-  const material = new THREE.LineBasicMaterial({
-    color: color,
-    linewidth: width,
-  });
+  const material = new THREE.LineBasicMaterial({ color, linewidth: width });
   const geometry = new THREE.BufferGeometry();
-  const lineLoopPoints = [];
-
-  // Calculate points for the circular path
-  const numSegments = 100; // Number of segments to create the circular path
-  for (let i = 0; i <= numSegments; i++) {
+  const numSegments = 100;
+  const lineLoopPoints = Array.from({ length: numSegments + 1 }, (_, i) => {
     const angle = (i / numSegments) * Math.PI * 2;
-    const x = radius * Math.cos(angle);
-    const z = radius * Math.sin(angle);
-    const y = radius * Math.sin(angle) * Math.sin(inclination * Math.PI / 180); // Apply inclination
-    lineLoopPoints.push(x, y, z);
-  }
+    return [radius * Math.cos(angle), radius * Math.sin(angle) * Math.sin(inclination * Math.PI / 180), radius * Math.sin(angle)];
+  }).flat();
 
   geometry.setAttribute(
     "position",
     new THREE.Float32BufferAttribute(lineLoopPoints, 3)
   );
+
   const lineLoop = new THREE.LineLoop(geometry, material);
   scene.add(lineLoop);
   path_of_planets.push(lineLoop);
 }
 
-const generatePlanet = (size, planetTexture, x, inclination = 0, axisTilt = 0, ring, moons = []) => {
-  const planetGeometry = new THREE.SphereGeometry(size, 50, 50);
-  const planetMaterial = new THREE.MeshStandardMaterial({
-    map: planetTexture,
-  });
-  const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+
+const generatePlanet = (
+  size, 
+  planetTexture, 
+  x, 
+  inclination = 0, 
+  axisTilt = 0, 
+  ring
+) => {
+  // Create planet geometry and material
+  const planet = new THREE.Mesh(
+    new THREE.SphereGeometry(size, 50, 50),
+    new THREE.MeshStandardMaterial({ map: planetTexture })
+  );
+  planet.position.set(x, 0, 0);
+  planet.rotation.x = axisTilt * Math.PI / 180;
+
   const planetObj = new THREE.Object3D();
   planetObj.add(planet);
-  planet.position.set(x, 0, 0);
 
   const pivot = new THREE.Object3D();
-  pivot.add(planetObj);
   pivot.rotation.x = -inclination * Math.PI / 180;
+  pivot.add(planetObj);
   scene.add(pivot);
 
-  // Add rings if the planet has them
   if (ring) {
-    const ringGeo = new THREE.RingGeometry(ring.innerRadius, ring.outerRadius, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      map: ring.ringmat,
-      side: THREE.DoubleSide,
-      transparent: true,
-    });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    const ringMesh = new THREE.Mesh(
+      new THREE.RingGeometry(ring.innerRadius, ring.outerRadius, 32),
+      new THREE.MeshBasicMaterial({
+        map: ring.ringmat,
+        side: THREE.DoubleSide,
+        transparent: true,
+      })
+    );
     ringMesh.position.set(x, 0, 0);
-    ringMesh.rotation.x = axisTilt * Math.PI / 180 - 0.5 * Math.PI;
+    ringMesh.rotation.x = (axisTilt - 90) * Math.PI / 180;
     planetObj.add(ringMesh);
   }
 
-  planet.rotation.x = axisTilt * Math.PI / 180;
-
-  // Add moons
-  const m = moons.map((moon) => {
-    // Adjust moon size and distance relative to the planet size
-    const moonSize = size * 0.2; // Example: make moon smaller
-    const moonTexture = textures[moon.name.toLowerCase()];
-    const moonDistance = size * 2.5 + moon.distance_from_planet; // Adjust moon distance
-    const moonInclination = moon.orbital_inclination_degrees;
-    const moonRotatingSpeed = moon.orbital_velocity_km_s / 10000;
-    const moonSelfRotationSpeed = 1 / moon.rotation_period_hours;
-
-    // Create the moon mesh and object
-    const moonGeometry = new THREE.SphereGeometry(moonSize, 30, 30); // Fewer segments for performance
-    const moonMaterial = new THREE.MeshStandardMaterial({
-      map: moonTexture,
-    });
-    const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
-    const moonObj = new THREE.Object3D();
-    moonMesh.position.set(moonDistance, 0, 0);
-    moonObj.add(moonMesh);
-
-    // Create moon pivot for rotation around the planet
-    const moonPivot = new THREE.Object3D();
-    moonPivot.add(moonObj);
-    moonPivot.rotation.x = moonInclination * Math.PI / 180; // Apply moon's inclination
-    planetObj.add(moonPivot); // Attach moon to planet object
-
-    // Draw moon orbit around planet (fixed)
-    createLineLoopWithMesh(moonDistance, 0xffffff, 1, moonInclination);
-
-    return {
-      moon: moonObj,
-      pivot: moonPivot,
-      mesh: moonMesh,
-      rotating_speed_around_planet: moonRotatingSpeed,
-      self_rotation_speed: moonSelfRotationSpeed,
-    };
-  });
-
-  // Create planet orbit line (fixed)
-  createLineLoopWithMesh(x, 0xffffff, 1, inclination); // Planet orbit is drawn properly here.
+  createLineLoopWithMesh(x, 0xffffff, 1, inclination);
 
   return {
-    planetObj: planetObj,
-    planet: planet,
-    pivot: pivot,
-    inclination: inclination,
-    moons: m,
+    planetObj,
+    planet,
+    pivot,
+    inclination,
   };
 };
 
+
 const planets = planetsData.planets.map((planet) => {
   return {
-    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null, planet.moons),
+    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null),
     rotating_speed_around_sun: planet.orbital_velocity_km_s / 10000,
     self_rotation_speed: (1/planet.rotation_period_hours)
   }
 })
 
 const generateAsteroidBelt = (innerRadius, outerRadius, texture) => {
-  const asteroidBeltGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 32);
-  const asteroidBeltMaterial = new THREE.MeshBasicMaterial({
-    map: texture,
-    side: THREE.DoubleSide,
-    transparent: true
-  });
-  const asteroidBeltMesh = new THREE.Mesh(asteroidBeltGeometry, asteroidBeltMaterial);
+  const asteroidBeltMesh = new THREE.Mesh(
+    new THREE.RingGeometry(innerRadius, outerRadius, 32),
+    new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      transparent: true,
+    })
+  );
+  
   asteroidBeltMesh.rotation.x = Math.PI / 2;
   scene.add(asteroidBeltMesh);
+
   return asteroidBeltMesh;
 };
+
 
 const ast_belt = generateAsteroidBelt(300, 500, textures.asteroidBelt)
 var GUI = dat.gui.GUI;
 const gui = new GUI({name:"Controls"});
 const options = {
-  "Real view": true,
-  "Show path": true,
+  "Realistic": true,
+  "Show Orbits": true,
   "Planet Scale": 1,
-  "Playing": true,
-  "Speed": 1
+  "Speed": 1,
+  "Playing": true
 };
-gui.add(options, "Real view").onChange((e) => {
+gui.add(options, "Realistic").onChange((e) => {
   ambientLight.intensity = e ? 0 : 0.5;
 });
-gui.add(options, "Show path").onChange((e) => {
+gui.add(options, "Show Orbits").onChange((e) => {
   path_of_planets.forEach((dpath) => {
     dpath.visible = e;
   });
 });
-
+gui.add(options, "Speed", 1, 10)
 gui.add(options, "Planet Scale", 1, 10).onChange((e) => {
-  planets.forEach(({planet, moons}) => {
+  planets.forEach(({planet}) => {
     planet.scale.set(e, e, e)
-    moons.forEach((moon) => {
-      moon.moon.scale.set(e, e, e)
-    })
   })
 })
 
 function animate() {
   sun.rotateY(0.004);
   planets.forEach(
-    ({ pivot, planet, rotating_speed_around_sun, self_rotation_speed, moons }) => {
+    ({ pivot, planet, rotating_speed_around_sun, self_rotation_speed }) => {
       pivot.rotateY(options.Speed * rotating_speed_around_sun);
       planet.rotateY(options.Speed * self_rotation_speed);
-      
-      if (moons) {
-        moons.forEach((moon) => {
-          moon.pivot.rotateY(options.Speed * moon.rotating_speed_around_planet);
-          moon.mesh.rotateY(options.Speed * moon.self_rotation_speed);
-        });
-      }
     }
   );
   ast_belt.rotateZ(0.001)

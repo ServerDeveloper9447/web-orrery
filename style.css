@@ -1,8 +1,0 @@
-#card {
-    display: flex;
-    flex-direction: row;
-    gap: 10rem;
-    height: 50vh;
-    justify-content: flex-start;
-    align-items: flex-start;
-}
