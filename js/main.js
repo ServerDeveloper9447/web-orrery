@@ -22,9 +22,7 @@ const textures = {
   uranusRing: textureLoader.load("./image/uranus_ring.png"),
   asteroidBelt: textureLoader.load('./image/asteroid_belt.png'),
   luna: textureLoader.load('./image/moon.png'),
-  asteroid: textureLoader.load('./image/asteroid.jpg'),
-  phobos: textureLoader.load('./image/phobos.jpg'),
-  deimos: textureLoader.load('./image/deimos.jpg')
+  asteroid: textureLoader.load('./image/asteroid.jpg')
 };
 
 const scene = new THREE.Scene();

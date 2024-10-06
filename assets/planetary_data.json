@@ -101,26 +101,7 @@
         "surface_pressure_bars": 0.01,
         "number_of_moons": 2,
         "ring_system": false,
-        "global_magnetic_field": false,
-        "moons": [
-          {
-            "name": "Phobos",
-            "orbital_inclination_degrees": 5,
-            "rotating_speed_around_planet": 0.01,
-            "self_rotation_speed": 27,
-            "size": 0.3,
-            "distance_from_planet": 4,
-            "obliquity_to_orbit_degrees": 2
-          },{
-            "name": "Deimos",
-            "orbital_inclination_degrees": 30,
-            "rotating_speed_around_planet": 0.01,
-            "self_rotation_speed": 40,
-            "size": 0.4,
-            "distance_from_planet": 7,
-            "obliquity_to_orbit_degrees": 5
-          }
-        ]
+        "global_magnetic_field": false
       },
       {
         "name": "Jupiter",
