@@ -71,12 +71,12 @@
         "moons": [
           {
             "name": "Luna",
-            "orbital_inclination_degrees": 25,
-            "rotating_speed_around_planet": 90,
-            "self_rotation_speed": 100,
-            "size": 100,
-            "distance_from_planet": 100,
-            "obliquity_to_orbit_degrees": 30
+            "orbital_inclination_degrees": 2,
+            "rotating_speed_around_planet": 0.01,
+            "self_rotation_speed": 27,
+            "size": 0.4,
+            "distance_from_planet": 7,
+            "obliquity_to_orbit_degrees": 2
           }
         ]
       },

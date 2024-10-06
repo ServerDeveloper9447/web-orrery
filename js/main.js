@@ -71,21 +71,60 @@ function createLineLoopWithMesh(radius, color, width, inclination = 0) {
   path_of_planets.push(lineLoop);
 }
 
+function createMoon(planet, name, size, distanceFromPlanet, selfRotation = 0, orbitSpeedAroundPlanet = 0, inclination = 0) {
+  // Check if the texture exists
+  if (!textures[name.toLowerCase()]) {
+    console.error("Texture not found for moon:", name);
+    return;
+  }
 
+  // Create the moon geometry and material
+  const moonGeometry = new THREE.SphereGeometry(size, 20, 20);
+  const moonMaterial = new THREE.MeshBasicMaterial({ map: textures[name.toLowerCase()] });
+  const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+
+  // Set the moon's initial position, relative to the planet's position
+  moon.position.x = distanceFromPlanet; // Position the moon relative to the planet
+  moon.rotation.x = selfRotation * Math.PI / 180; // Tilt the moon's axis if required
+
+  // Create a pivot for moon's orbit around the planet
+  const moonOrbitPivot = new THREE.Object3D();
+  moonOrbitPivot.rotation.z = orbitSpeedAroundPlanet * Math.PI / 180; // Rotate moon around the planet
+  moonOrbitPivot.add(moon); // Add the moon to the pivot
+
+  // Create a second pivot for moon's inclination (tilt of orbit)
+  const moonInclinationPivot = new THREE.Object3D();
+  moonInclinationPivot.rotation.x = inclination * Math.PI / 180; // Tilt the moon's orbit
+  moonInclinationPivot.add(moonOrbitPivot); // Add moon orbit pivot to inclination pivot
+
+  // Add the moon's orbital system to the planet's object
+  planet.add(moonInclinationPivot);
+  
+  return moonInclinationPivot; // Return the entire moon system
+}
+
+const options = {
+  "Realistic": true,
+  "Show Orbits": true,
+  "Planet Scale": 1,
+  "Speed": 1,
+  "Playing": true
+};
 const generatePlanet = (
   size, 
   planetTexture, 
   x, 
   inclination = 0, 
   axisTilt = 0, 
-  ring
+  ring,
+  moons = []
 ) => {
   // Create planet geometry and material
   const planet = new THREE.Mesh(
     new THREE.SphereGeometry(size, 50, 50),
     new THREE.MeshStandardMaterial({ map: planetTexture })
   );
-  planet.position.set(x, 0, 0);
+  planet.position.set(x, 0, 0);  // <-- Earth's position (distance from Sun)
   planet.rotation.x = axisTilt * Math.PI / 180;
 
   const planetObj = new THREE.Object3D();
@@ -96,13 +135,13 @@ const generatePlanet = (
   pivot.add(planetObj);
   scene.add(pivot);
 
+  // Add planet rings if applicable
   if (ring) {
     const ringMesh = new THREE.Mesh(
       new THREE.RingGeometry(ring.innerRadius, ring.outerRadius, 32),
       new THREE.MeshBasicMaterial({
         map: ring.ringmat,
-        side: THREE.DoubleSide,
-        transparent: true,
+        side: THREE.DoubleSide
       })
     );
     ringMesh.position.set(x, 0, 0);
@@ -110,7 +149,14 @@ const generatePlanet = (
     planetObj.add(ringMesh);
   }
 
-  createLineLoopWithMesh(x, 0xffffff, 1, inclination);
+  // Add moons
+  if (moons) {
+    for (const moon of moons) {
+      createMoon(planet, "luna", moon.size, 7, moon.self_rotation_speed, moon.rotating_speed_around_planet, moon.orbital_inclination_degrees);
+    }
+  }
+
+  createLineLoopWithMesh(x, 0xffffff, 1, inclination); // Orbit path
 
   return {
     planetObj,
@@ -121,9 +167,10 @@ const generatePlanet = (
 };
 
 
+
 const planets = planetsData.planets.map((planet) => {
   return {
-    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null),
+    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? {ringmat:planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null,innerRadius: (planet.diameter_km/earthData.diameter_km)+50, outerRadius: (planet.diameter_km/earthData.diameter_km)+100} : planet.name == "Uranus" ? {ringmat:planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null,innerRadius: (planet.diameter_km/earthData.diameter_km)+50, outerRadius: (planet.diameter_km/earthData.diameter_km)+100} : null, planet.moons),
     rotating_speed_around_sun: planet.orbital_velocity_km_s / 10000,
     self_rotation_speed: (1/planet.rotation_period_hours)
   }
@@ -149,13 +196,7 @@ const generateAsteroidBelt = (innerRadius, outerRadius, texture) => {
 const ast_belt = generateAsteroidBelt(300, 500, textures.asteroidBelt)
 var GUI = dat.gui.GUI;
 const gui = new GUI({name:"Controls"});
-const options = {
-  "Realistic": true,
-  "Show Orbits": true,
-  "Planet Scale": 1,
-  "Speed": 1,
-  "Playing": true
-};
+
 gui.add(options, "Realistic").onChange((e) => {
   ambientLight.intensity = e ? 0 : 0.5;
 });
@@ -165,7 +206,7 @@ gui.add(options, "Show Orbits").onChange((e) => {
   });
 });
 gui.add(options, "Speed", 1, 10)
-gui.add(options, "Planet Scale", 1, 10).onChange((e) => {
+gui.add(options, "Planet Scale", 1, 5).onChange((e) => {
   planets.forEach(({planet}) => {
     planet.scale.set(e, e, e)
   })
