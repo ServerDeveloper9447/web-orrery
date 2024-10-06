@@ -22,7 +22,9 @@ const textures = {
   uranusRing: textureLoader.load("./image/uranus_ring.png"),
   asteroidBelt: textureLoader.load('./image/asteroid_belt.png'),
   luna: textureLoader.load('./image/moon.png'),
-  asteroid: textureLoader.load('./image/asteroid.jpg')
+  asteroid: textureLoader.load('./image/asteroid.jpg'),
+  phobos: textureLoader.load('./image/phobos.jpg'),
+  deimos: textureLoader.load('./image/deimos.jpg')
 };
 
 const scene = new THREE.Scene();
@@ -89,8 +91,6 @@ function createMoon(planet, name, size, distanceFromPlanet, selfRotation = 0, or
   moonInclinationPivot.rotation.x = inclination * Math.PI / 180;
   moonInclinationPivot.add(moonOrbitPivot);
   planet.add(moonInclinationPivot);
-  
-  return moonInclinationPivot;
 }
 
 const options = {
