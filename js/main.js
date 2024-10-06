@@ -53,12 +53,11 @@ const sun = new THREE.Mesh(sungeo, sunMaterial);
 scene.add(sun);
 
 const path_of_planets = [];
-function createLineLoopWithMesh(radius, color, width, inclination = 0) {
+function createOrbit(radius, color, width, inclination = 0) {
   const material = new THREE.LineBasicMaterial({ color, linewidth: width });
   const geometry = new THREE.BufferGeometry();
-  const numSegments = 100;
-  const lineLoopPoints = Array.from({ length: numSegments + 1 }, (_, i) => {
-    const angle = (i / numSegments) * Math.PI * 2;
+  const lineLoopPoints = Array.from({ length: 101 }, (_, i) => {
+    const angle = (i / 100) * Math.PI * 2;
     return [radius * Math.cos(angle), radius * Math.sin(angle) * Math.sin(inclination * Math.PI / 180), radius * Math.sin(angle)];
   }).flat();
 
@@ -143,7 +142,7 @@ const generatePlanet = (
     }
   }
 
-  createLineLoopWithMesh(x, 0xffffff, 1, inclination);
+  createOrbit(x, 0xffffff, 1, inclination);
 
   return {
     planetObj,
