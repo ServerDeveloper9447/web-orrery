@@ -21,7 +21,8 @@ const textures = {
   saturnRing: textureLoader.load("./image/saturn_ring.png"),
   uranusRing: textureLoader.load("./image/uranus_ring.png"),
   asteroidBelt: textureLoader.load('./image/asteroid_belt.png'),
-  luna: textureLoader.load('./image/moon.png')
+  luna: textureLoader.load('./image/moon.png'),
+  asteroid: textureLoader.load('./image/asteroid.jpg')
 };
 
 const scene = new THREE.Scene();
@@ -138,7 +139,7 @@ const generatePlanet = (
 
   if (moons) {
     for (const moon of moons) {
-      createMoon(planet, "luna", moon.size, 7, moon.self_rotation_speed, moon.rotating_speed_around_planet, moon.orbital_inclination_degrees);
+      createMoon(planet, "luna", moon.size, moon.distance_from_planet, moon.self_rotation_speed, moon.rotating_speed_around_planet, moon.orbital_inclination_degrees);
     }
   }
 
