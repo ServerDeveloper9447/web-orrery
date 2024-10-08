@@ -216,6 +216,11 @@ pane.addBinding(options,'Planet Scale', {
 }))
 
 pane.addBinding(options, 'Cinematic')
+
+function showInfo(name) {
+
+}
+
 function animate() {
   sun.rotateY(0.004);
   planets.forEach(
@@ -231,6 +236,7 @@ function animate() {
         camera.lockedPlanet = name
         camera.lockedPosition = planet.position
         camera.lockedDistance = 10;
+        showInfo(name)
       })
     }
   );

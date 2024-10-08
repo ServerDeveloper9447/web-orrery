@@ -28,13 +28,41 @@
         color: white;
         padding: 10px;
       }
+      .info-box {
+        left: 5%;
+        bottom: 5%;
+        transform: translateX(-5%);
+        width: 30%;
+        position: absolute;
+        border: 2px solid skyblue;
+        border-radius: 10px;
+        color: white;
+        padding: 10px;
+        overflow: hidden;
+      }
+      .info-box>button {
+        background: transparent;
+        color: white;
+        border: 1px solid white;
+        border-radius: 10px;
+      }
     </style>
   </head>
   <body>
     <div class="header">
       <h1>Orrery Web App</h1>
     </div>
+    <div class="info-box">
+      <button id="toggle" state="extended">Collapse</button>
+      <p>Click on a planet to view its info.</p>
+      <hr>
+      <div class="info">
+        <h2 id="plname">Jupiter</h2>
+        <p id="pldesc">A planet worth mentioning</p>
+      </div>
+    </div>
     <div id="orrery"></div>
   </body>
   <script src="./js/main.js" type="module"></script>
+  <script src="./js/misc.js" type="module"></script>
 </html>
