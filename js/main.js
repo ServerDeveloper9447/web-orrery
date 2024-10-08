@@ -5,7 +5,7 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById("orrery").appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
-const planetsData = await fetch('/assets/planetary_data.json').then(res => res.json())
+const planetsData = await fetch('assets/planetary_data.json').then(res => res.json())
 const textures = {
   star: textureLoader.load("./image/stars.png"),
   sun: textureLoader.load("./image/sun.jpg"),
