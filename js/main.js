@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {Pane} from './tweakpane-4.0.4.min.js';
+import {InteractionManager} from 'three.interactive';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById("orrery").appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
-const planetsData = await fetch('/assets/planetary_data.json').then(res => res.json())
+const planetsData = await fetch('assets/planetary_data.json').then(res => res.json())
 const textures = {
   star: textureLoader.load("./image/stars.png"),
   sun: textureLoader.load("./image/sun.jpg"),
@@ -37,6 +39,11 @@ const camera = new THREE.PerspectiveCamera(
 );
 const orbit = new OrbitControls(camera, renderer.domElement);
 camera.position.set(0, 30, 150);
+const interactionManager = new InteractionManager(
+  renderer,
+  camera,
+  renderer.domElement
+);
 const sunLight = new THREE.PointLight(0xffffff, 4, 800, 1);
 
 scene.add(sunLight);
@@ -96,7 +103,8 @@ const options = {
   "Show Orbits": true,
   "Planet Scale": 1,
   "Speed": 1,
-  "Playing": true
+  "Playing": true,
+  "Cinematic": false
 };
 const generatePlanet = (
   size, 
@@ -141,22 +149,24 @@ const generatePlanet = (
   }
 
   createOrbit(x, 0xffffff, 1, inclination);
-
   return {
     planetObj,
     planet,
     pivot,
-    inclination,
+    inclination
   };
 };
 
 
 
 const planets = planetsData.planets.map((planet) => {
+  const generated = generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? {ringmat:planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null,innerRadius: (planet.diameter_km/earthData.diameter_km)+50, outerRadius: (planet.diameter_km/earthData.diameter_km)+100} : planet.name == "Uranus" ? {ringmat:planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null,innerRadius: (planet.diameter_km/earthData.diameter_km)+50, outerRadius: (planet.diameter_km/earthData.diameter_km)+100} : null, planet.moons)
+  interactionManager.add(generated.planet)
   return {
-    ...generatePlanet((planet.diameter_km/earthData.diameter_km),textures[planet.name.toLowerCase()], planet.distance_from_sun_106_km, planet.orbital_inclination_degrees, planet.obliquity_to_orbit_degrees, planet.name == "Saturn" ? {ringmat:planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null,innerRadius: (planet.diameter_km/earthData.diameter_km)+50, outerRadius: (planet.diameter_km/earthData.diameter_km)+100} : planet.name == "Uranus" ? {ringmat:planet.name == "Saturn" ? textures.saturnRing : planet.name == "Uranus" ? textures.uranusRing : null,innerRadius: (planet.diameter_km/earthData.diameter_km)+50, outerRadius: (planet.diameter_km/earthData.diameter_km)+100} : null, planet.moons),
+    ...generated,
     rotating_speed_around_sun: planet.orbital_velocity_km_s / 10000,
-    self_rotation_speed: (1/planet.rotation_period_hours)
+    self_rotation_speed: (1/planet.rotation_period_hours),
+    name: planet.name
   }
 })
 
@@ -178,39 +188,67 @@ const generateAsteroidBelt = (innerRadius, outerRadius, texture) => {
 
 
 const ast_belt = generateAsteroidBelt(300, 500, textures.asteroidBelt)
-var GUI = dat.gui.GUI;
-const gui = new GUI({name:"Controls"});
-
-gui.add(options, "Realistic").onChange((e) => {
-  ambientLight.intensity = e ? 0 : 0.5;
-});
-gui.add(options, "Show Orbits").onChange((e) => {
-  path_of_planets.forEach((dpath) => {
-    dpath.visible = e;
-  });
-});
-gui.add(options, "Speed", 1, 10)
-gui.add(options, "Planet Scale", 1, 5).onChange((e) => {
-  planets.forEach(({planet}) => {
-    planet.scale.set(e, e, e)
-  })
+const pane = new Pane({
+  title: "Controls"
 })
 
+pane.addBinding(options,'Realistic').on('change',(e) => {
+  ambientLight.intensity = e.value ? 0 : 0.5;
+})
+
+pane.addBinding(options,'Show Orbits').on('change', (e) => {
+  path_of_planets.forEach((dpath) => {
+    dpath.visible = e.value;
+  });
+})
+
+pane.addBinding(options,'Speed', {
+  max: 10,
+  min: 1,
+  step: 1
+})
+
+pane.addBinding(options,'Planet Scale', {
+  max: 5,
+  min: 1
+}).on('change',(e) => planets.forEach(({planet}) => {
+  planet.scale.set(e.value, e.value, e.value)
+}))
+
+pane.addBinding(options, 'Cinematic')
 function animate() {
   sun.rotateY(0.004);
   planets.forEach(
-    ({ pivot, planet, rotating_speed_around_sun, self_rotation_speed }) => {
+    ({ pivot, planet, rotating_speed_around_sun, self_rotation_speed, name }) => {
       pivot.rotateY(options.Speed * rotating_speed_around_sun);
       planet.rotateY(options.Speed * self_rotation_speed);
+      const pos = new THREE.Vector3()
+      planet.getWorldPosition(pos)
+      if (camera.lockedPlanet == name) {
+        orbit.target = pos;
+      }
+      planet.addEventListener('click',() => {
+        camera.lockedPlanet = name
+        camera.lockedPosition = planet.position
+        camera.lockedDistance = 10;
+      })
     }
   );
+  if (options.Cinematic) {
+    camera.position.x = Math.cos(Date.now() * 0.0005) * 1000;
+    camera.position.z = Math.sin(Date.now() * 0.0005) * 1000;
+    camera.rotation.x = Date.now() * 0.00001;
+    camera.rotation.y = Date.now() * 0.00002;
+    camera.rotation.z = Date.now() * 0.00003;
+    camera.lookAt(sun.position);
+  }
   ast_belt.rotateZ(0.001)
   orbit.update()
   renderer.render(scene, camera);
 }
 renderer.setAnimationLoop(animate)
-gui.add(options, "Playing").onChange((e) => {
-  if(e) {
+pane.addBinding(options, 'Playing').on('change',(e) => {
+  if(e.value) {
     renderer.setAnimationLoop(animate)
   } else {
     renderer.setAnimationLoop(() => renderer.render(scene, camera))
@@ -222,3 +260,12 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+window.addEventListener('keydown', (e) => {
+  if (e.key == 'Escape') {
+    camera.lockedPlanet = null;
+    orbit.target = sun.position;
+    camera.position.set(0, 30, 150);
+    camera.lookAt(sun.position);
+  }
+})

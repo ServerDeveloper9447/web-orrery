@@ -7,12 +7,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
     <title>Orrery Web App</title>
-    <script src="/js/dat.gui.min.js"></script>
     <script type="importmap">
       {
         "imports": {
           "three": "https://cdn.jsdelivr.net/npm/three@v0.149.0/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.149.0/examples/jsm/"
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.149.0/examples/jsm/",
+          "three.interactive": "https://cdn.jsdelivr.net/npm/three.interactive@1.8.0/build/three.interactive.min.js"
         }
       }
     </script>
@@ -32,7 +32,7 @@
   </head>
   <body>
     <div class="header">
-      <h1>Syntax Squad | Orrery Web App</h1>
+      <h1>Orrery Web App</h1>
       <p>Made for NASA Space Apps Challenge</p>
     </div>
     <div id="orrery"></div>
